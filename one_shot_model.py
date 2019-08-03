@@ -11,7 +11,7 @@ from dataset import load_data
 # input images will be 256x256x3
 # input_shape = (256, 256, 3)
 input_shape = (28, 28, 1)
-encoding_size = 64 # CHANGE TO 64
+encoding_size = 32 # CHANGE TO 64
 
 # encoder components
 # 3x3 CONV -> POOL -> DROPOUT -> BATCH NORM
@@ -108,9 +108,9 @@ def encoder_forward(X):
     # X = batn_8(X)
 
     X = flat_1(X)
-    # X = dens_1(X)
-    # X = drop_8(X)
-    # X = batn_9(X)
+    X = dens_1(X)
+    X = drop_8(X)
+    X = batn_9(X)
     X = dens_2(X)
     return X
 
