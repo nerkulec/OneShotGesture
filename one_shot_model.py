@@ -1,11 +1,17 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, BatchNormalization, Dropout, Flatten, Dense
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, BatchNormalization, Dropout, Flatten, Dense, Subtract, Lambda
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam
 import tensorflow.keras.backend as K
+import numpy as np
+from random import random
+import datetime
+from dataset import load_data
 
 # input images will be 256x256x3
-input_shape = (256, 256, 3)
-encoding_size = 64
+# input_shape = (256, 256, 3)
+input_shape = (28, 28, 1)
+encoding_size = 64 # CHANGE TO 64
 
 # encoder components
 # 3x3 CONV -> POOL -> DROPOUT -> BATCH NORM
@@ -17,7 +23,7 @@ batn_1 = BatchNormalization(name='batch_norm_1')
 # size is now 128x128x64
 
 # 3x3 CONV -> POOL -> DROPOUT -> BATCH NORM
-conv_2 = Conv2D(128, (3, 3), activation='relu', padding='same', name='conv_2')
+conv_2 = Conv2D(64, (3, 3), activation='relu', padding='same', name='conv_2') # CHANGE TO 128
 drop_2 = Dropout(0.7, name='dropout_2')
 pool_2 = MaxPooling2D((2,2), name='pool_2')
 batn_2 = BatchNormalization(name='batch_norm_2')
@@ -61,7 +67,7 @@ batn_8 = BatchNormalization(name='batch_norm_8')
 # FLAT -> DENSE -> DROPOUT -> BATCH NORM -> DENSE -> DROPOUT -> BATCH NORM -> DENSE
 
 flat_1 = Flatten(name='flatten_1')
-dens_1 = Dense(64, activation='relu', name='dense_1')
+dens_1 = Dense(64, activation='relu', name='dense_1') # CHANGE TO 64
 drop_8 = Dropout(0.3, name='dropout_8')
 batn_9 = BatchNormalization(name='batch_norm_9')
 dens_2 = Dense(encoding_size, activation='relu', name='dense_2')
@@ -72,26 +78,26 @@ def encoder_forward(X):
     X = drop_1(X)
     X = batn_1(X)
 
-    X = conv_2(X)
-    X = pool_2(X)
-    X = drop_2(X)
-    X = batn_2(X)
+    # X = conv_2(X)
+    # X = pool_2(X)
+    # X = drop_2(X)
+    # X = batn_2(X)
 
-    X = conv_3(X)
-    X = drop_3(X)
-    X = batn_3(X)
-    X = conv_4(X)
-    X = pool_3(X)
-    X = drop_4(X)
-    X = batn_4(X)
+    # X = conv_3(X)
+    # X = drop_3(X)
+    # X = batn_3(X)
+    # X = conv_4(X)
+    # X = pool_3(X)
+    # X = drop_4(X)
+    # X = batn_4(X)
 
-    X = conv_5(X)
-    X = drop_5(X)
-    X = batn_5(X)
-    X = conv_6(X)
-    X = pool_4(X)
-    X = drop_6(X)
-    X = batn_6(X)
+    # X = conv_5(X)
+    # X = drop_5(X)
+    # X = batn_5(X)
+    # X = conv_6(X)
+    # X = pool_4(X)
+    # X = drop_6(X)
+    # X = batn_6(X)
 
     X = conv_7(X)
     X = drop_7(X)
@@ -102,9 +108,9 @@ def encoder_forward(X):
     X = batn_8(X)
 
     X = flat_1(X)
-    X = dens_1(X)
-    X = drop_8(X)
-    X = batn_9(X)
+    # X = dens_1(X)
+    # X = drop_8(X)
+    # X = batn_9(X)
     X = dens_2(X)
     return X
 
@@ -126,10 +132,10 @@ def comparator_forward(X_1, X_2, encoded=False):
     else:
         X_1_encoding = encoder_forward(X_1)
         X_2_encoding = encoder_forward(X_2)
-    X = tf.abs(tf.subtract(X_2_encoding, X_1_encoding, name='difference'), name='abs')
-    X = dens_3(X)
-    X = drop_9(X)
-    X = batn_10(X)
+    X = Lambda(abs)(Subtract(name='difference')([X_2_encoding, X_1_encoding]))
+    # X = dens_3(X)
+    # X = drop_9(X)
+    # X = batn_10(X)
     X = dens_4(X)
     return X
 
@@ -151,5 +157,22 @@ if __name__ == '__main__':
     encoding_comparator = comparator_model(encoded=True)
         
     encoder.summary()
-    comparator.summary()
-    encoding_comparator.summary()
+    # comparator.summary()
+    # encoding_comparator.summary()
+    
+    comparator.compile(optimizer=Adam(lr=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+
+    log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+    (x_train, y_train), (x_test, y_test) = load_data()
+
+    comparator.fit(x=x_train, y = y_train,
+          epochs=20,
+          batch_size=64,
+          validation_data=(x_test, y_test), 
+          callbacks=[tensorboard_callback])
+
+    comparator.save('./saves/comparator.h5')
+
+    
