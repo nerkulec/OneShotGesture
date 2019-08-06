@@ -2,11 +2,14 @@ from random import random
 from matplotlib import pyplot as plt
 import numpy as np
 
-def choice(a):
-    try:
-        return a[int(random()*a.shape[0])]
-    except:
-        return a[int(random()*len(a))]
+def choice(a, excluding=None):
+    l = len(a)
+    if excluding is not None:
+        l -= 1
+    index = int(random()*l)
+    if excluding is not None and l >= excluding:
+        index += 1
+    return a[index]
 
 def show_imgs(imgs, labels=None, name='img.png'):
     imgs = [np.reshape(img, (28, 28)) for img in imgs]
