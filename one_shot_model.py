@@ -10,8 +10,8 @@ from dataset import load_data
 
 # input images will be 256x256x3
 # input_shape = (256, 256, 3)
-input_shape = (28, 28, 1)
-encoding_size = 32 # CHANGE TO 64
+input_shape = (105, 105, 1)
+encoding_size = 64
 
 # encoder components
 # 3x3 CONV -> POOL -> DROPOUT -> BATCH NORM
@@ -68,7 +68,7 @@ batn_8 = BatchNormalization(name='batch_norm_8')
 
 flat_1 = Flatten(name='flatten_1')
 dens_1 = Dense(64, activation='relu', name='dense_1') # CHANGE TO 64
-drop_8 = Dropout(0.3, name='dropout_8')
+drop_9 = Dropout(0.3, name='dropout_9')
 batn_9 = BatchNormalization(name='batch_norm_9')
 dens_2 = Dense(encoding_size, activation='relu', name='dense_2')
 
@@ -83,33 +83,33 @@ def encoder_forward(X):
     X = drop_2(X)
     X = batn_2(X)
 
-    # X = conv_3(X)
-    # X = drop_3(X)
-    # X = batn_3(X)
-    # X = conv_4(X)
-    # X = pool_3(X)
-    # X = drop_4(X)
-    # X = batn_4(X)
+    X = conv_3(X)
+    X = drop_3(X)
+    X = batn_3(X)
+    X = conv_4(X)
+    X = pool_3(X)
+    X = drop_4(X)
+    X = batn_4(X)
 
-    # X = conv_5(X)
-    # X = drop_5(X)
-    # X = batn_5(X)
-    # X = conv_6(X)
-    # X = pool_4(X)
-    # X = drop_6(X)
-    # X = batn_6(X)
+    X = conv_5(X)
+    X = drop_5(X)
+    X = batn_5(X)
+    X = conv_6(X)
+    X = pool_4(X)
+    X = drop_6(X)
+    X = batn_6(X)
 
-    # X = conv_7(X)
-    # X = drop_7(X)
-    # X = batn_7(X)
-    # X = conv_8(X)
-    # X = pool_5(X)
-    # X = drop_8(X)
-    # X = batn_8(X)
+    X = conv_7(X)
+    X = drop_7(X)
+    X = batn_7(X)
+    X = conv_8(X)
+    X = pool_5(X)
+    X = drop_8(X)
+    X = batn_8(X)
 
     X = flat_1(X)
     X = dens_1(X)
-    X = drop_8(X)
+    X = drop_9(X)
     X = batn_9(X)
     X = dens_2(X)
     return X
@@ -121,7 +121,7 @@ def encoder_model():
     return model
 
 dens_3 = Dense(16, activation='relu', name='dense_3')
-drop_9 = Dropout(0.4, name='dropout_9')
+drop_10 = Dropout(0.4, name='dropout_9')
 batn_10 = BatchNormalization(name='batch_norm_10')
 dens_4 = Dense(1, activation='sigmoid', name='dense_4')
 
@@ -134,7 +134,7 @@ def comparator_forward(X_1, X_2, encoded=False):
         X_2_encoding = encoder_forward(X_2)
     X = Lambda(abs)(Subtract(name='difference')([X_2_encoding, X_1_encoding]))
     # X = dens_3(X)
-    # X = drop_9(X)
+    # X = drop_10(X)
     # X = batn_10(X)
     X = dens_4(X)
     return X
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    (x_train, y_train), (x_test, y_test) = load_data()
+    (x_train, y_train), (x_test, y_test) = load_data(dataset='omniglot')
 
     comparator.fit(x=x_train, y = y_train,
           epochs=20,

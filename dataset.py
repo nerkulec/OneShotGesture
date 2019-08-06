@@ -1,9 +1,10 @@
 import numpy as np
-from random import random, sample
+from random import random, sample, shuffle
 from utils import choice, show_imgs
 import os
+from tqdm import tqdm
 
-def load_data(dataset='mnist', repeats=6):
+def load_data(dataset='mnist', repeats=3):
     if dataset == 'mnist':
         from tensorflow.keras.datasets import mnist
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -45,12 +46,14 @@ def load_data(dataset='mnist', repeats=6):
                 wrong_class = choice(range(10), excluding=y_test[example//repeats])
                 test_X_2[example] = choice(bins[wrong_class])
                 test_Y[example] = 0
+
+        print('mnist loaded')
         return ([train_X_1, train_X_2], train_Y), ([test_X_1, test_X_2], test_Y)
 
 
     if dataset == 'omniglot':
         import cv2
-        dataset_path = '~/datasets/omniglot/'
+        dataset_path = '/home/bartek/datasets/omniglot/'
         path_bins = []
         for language in os.listdir(dataset_path):
             for character in os.listdir(dataset_path+language+'/'):
@@ -68,14 +71,20 @@ def load_data(dataset='mnist', repeats=6):
                 train_path_bins.append(path_bins[i])
         train_bins = []
         test_bins = []
-        for path_bin in train_path_bins:
+        print('Loading train images...')
+        for path_bin in tqdm(train_path_bins):
             train_bins.append([])
             for img_path in path_bin:
-                train_bins[-1].append(np.reshape(cv2.imread(img_path), (105, 105, 1)))
-        for path_bin in test_path_bins:
+                img = np.mean(np.reshape(cv2.imread(img_path), (105, 105, 3)), axis=2, keepdims=True)
+                img = 1-img/255
+                train_bins[-1].append(img)
+        print('Loading test images...')
+        for path_bin in tqdm(test_path_bins):
             test_bins.append([])
             for img_path in path_bin:
-                test_bins[-1].append(np.reshape(cv2.imread(img_path), (105, 105, 1)))
+                img = np.mean(np.reshape(cv2.imread(img_path), (105, 105, 3)), axis=2, keepdims=True)
+                img = 1-img/255
+                test_bins[-1].append(img)
         
         total_number = sum(len(b) for b in train_bins)
 
@@ -83,16 +92,17 @@ def load_data(dataset='mnist', repeats=6):
         train_X_2 = np.zeros((total_number*repeats, 105, 105, 1))
         train_Y = np.zeros(total_number*repeats)
         example = 0
-        for img_bin_num, img_bin in enumerate(train_bins):
+        print('Constructing training examples...')
+        for img_bin_num, img_bin in tqdm(enumerate(train_bins)):
             for img_num, img in enumerate(img_bin):
                 for i in range(repeats):
                     train_X_1[example] = img
-                    if random < 0.5:
-                        train_X_2[example] = choice(img_bin, excluding=img_num)
+                    if random() < 0.5:
+                        train_X_2[example] = choice(img_bin, excluding=img_num).view()
                         train_Y[example] = 1
                     else:
                         wrong_bin = choice(train_bins, excluding=img_bin_num)
-                        train_X_2[example] = choice(wrong_bin)
+                        train_X_2[example] = choice(wrong_bin).view()
                         train_Y[example] = 0
                     example += 1
 
@@ -102,19 +112,21 @@ def load_data(dataset='mnist', repeats=6):
         test_X_2 = np.zeros((total_number*repeats, 105, 105, 1))
         test_Y = np.zeros(total_number*repeats)
         example = 0
-        for img_bin_num, img_bin in enumerate(test_bins):
+        print('Constructing training examples...')
+        for img_bin_num, img_bin in tqdm(enumerate(test_bins)):
             for img_num, img in enumerate(img_bin):
                 for i in range(repeats):
                     test_X_1[example] = img
-                    if random < 0.5:
-                        test_X_2[example] = choice(img_bin, excluding=img_num)
+                    if random() < 0.5:
+                        test_X_2[example] = choice(img_bin, excluding=img_num).view()
                         test_Y[example] = 1
                     else:
                         wrong_bin = choice(test_bins, excluding=img_bin_num)
-                        test_X_2[example] = choice(wrong_bin)
+                        test_X_2[example] = choice(wrong_bin).view()
                         test_Y[example] = 0
                     example += 1
         
+        print('omniglot loaded')
         return ([train_X_1, train_X_2], train_Y), ([test_X_1, test_X_2], test_Y)
 
 if __name__ == '__main__':
