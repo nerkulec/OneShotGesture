@@ -6,7 +6,7 @@ import tensorflow.keras.backend as K
 import numpy as np
 from random import random
 import datetime
-from dataset import load_data
+from dataset import load_data, get_generators
 
 # input images will be 256x256x3
 # input_shape = (256, 256, 3)
@@ -99,13 +99,13 @@ def encoder_forward(X):
     X = drop_6(X)
     X = batn_6(X)
 
-    X = conv_7(X)
-    X = drop_7(X)
-    X = batn_7(X)
-    X = conv_8(X)
-    X = pool_5(X)
-    X = drop_8(X)
-    X = batn_8(X)
+    # X = conv_7(X)
+    # X = drop_7(X)
+    # X = batn_7(X)
+    # X = conv_8(X)
+    # X = pool_5(X)
+    # X = drop_8(X)
+    # X = batn_8(X)
 
     X = flat_1(X)
     X = dens_1(X)
@@ -162,16 +162,22 @@ if __name__ == '__main__':
     
     comparator.compile(optimizer=Adam(lr=0.001), loss='binary_crossentropy', metrics=['accuracy'])
 
+    comparator.load_weights('saves/comparator.h5')
+
     log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    (x_train, y_train), (x_test, y_test) = load_data(dataset='omniglot')
+    batch_size = 64
 
-    comparator.fit(x=x_train, y = y_train,
-          epochs=20,
-          batch_size=64,
-          validation_data=(x_test, y_test), 
-          callbacks=[tensorboard_callback])
+    train_generator, test_generator = get_generators(dataset='omniglot', batch_size=batch_size)
+
+    # comparator.fit(x=x_train, y = y_train,
+    #       epochs=20,
+    #       batch_size=64,
+    #       validation_data=(x_test, y_test), 
+    #       callbacks=[tensorboard_callback])
+
+    comparator.fit_generator(train_generator, steps_per_epoch=int(1423*20/batch_size), epochs=40, initial_epoch=30, validation_data=test_generator, validation_steps=int(200*20/batch_size), callbacks=[tensorboard_callback])
 
     comparator.save('./saves/comparator.h5')
 

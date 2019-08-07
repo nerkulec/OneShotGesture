@@ -4,7 +4,7 @@ from utils import choice, show_imgs
 import os
 from tqdm import tqdm
 
-def load_data(dataset='mnist', repeats=3):
+def load_data(dataset='mnist', repeats=6):
     if dataset == 'mnist':
         from tensorflow.keras.datasets import mnist
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -51,7 +51,7 @@ def load_data(dataset='mnist', repeats=3):
         return ([train_X_1, train_X_2], train_Y), ([test_X_1, test_X_2], test_Y)
 
 
-    if dataset == 'omniglot':
+def get_generators(dataset='omniglot', batch_size=64):
         import cv2
         dataset_path = '/home/bartek/datasets/omniglot/'
         path_bins = []
@@ -69,65 +69,37 @@ def load_data(dataset='mnist', repeats=3):
                 test_path_bins.append(path_bins[i])
             else:
                 train_path_bins.append(path_bins[i])
-        train_bins = []
-        test_bins = []
-        print('Loading train images...')
-        for path_bin in tqdm(train_path_bins):
-            train_bins.append([])
-            for img_path in path_bin:
-                img = np.mean(np.reshape(cv2.imread(img_path), (105, 105, 3)), axis=2, keepdims=True)
-                img = 1-img/255
-                train_bins[-1].append(img)
-        print('Loading test images...')
-        for path_bin in tqdm(test_path_bins):
-            test_bins.append([])
-            for img_path in path_bin:
-                img = np.mean(np.reshape(cv2.imread(img_path), (105, 105, 3)), axis=2, keepdims=True)
-                img = 1-img/255
-                test_bins[-1].append(img)
         
-        total_number = sum(len(b) for b in train_bins)
+        train_path_bins = np.array(train_path_bins)
+        test_path_bins = np.array(test_path_bins)
 
-        train_X_1 = np.zeros((total_number*repeats, 105, 105, 1))
-        train_X_2 = np.zeros((total_number*repeats, 105, 105, 1))
-        train_Y = np.zeros(total_number*repeats)
-        example = 0
-        print('Constructing training examples...')
-        for img_bin_num, img_bin in tqdm(enumerate(train_bins)):
-            for img_num, img in enumerate(img_bin):
-                for i in range(repeats):
-                    train_X_1[example] = img
-                    if random() < 0.5:
-                        train_X_2[example] = choice(img_bin, excluding=img_num).view()
-                        train_Y[example] = 1
-                    else:
-                        wrong_bin = choice(train_bins, excluding=img_bin_num)
-                        train_X_2[example] = choice(wrong_bin).view()
-                        train_Y[example] = 0
-                    example += 1
+        def preprocess_img(img):
+            img = np.mean(np.reshape(img, (105, 105, 3)), axis=2, keepdims=True)
+            return 1-img/255
 
-        total_number = sum(len(b) for b in test_bins)
+        def load_img(img_path):
+            return preprocess_img(cv2.imread(img_path))
 
-        test_X_1 = np.zeros((total_number*repeats, 105, 105, 1))
-        test_X_2 = np.zeros((total_number*repeats, 105, 105, 1))
-        test_Y = np.zeros(total_number*repeats)
-        example = 0
-        print('Constructing training examples...')
-        for img_bin_num, img_bin in tqdm(enumerate(test_bins)):
-            for img_num, img in enumerate(img_bin):
-                for i in range(repeats):
-                    test_X_1[example] = img
-                    if random() < 0.5:
-                        test_X_2[example] = choice(img_bin, excluding=img_num).view()
-                        test_Y[example] = 1
-                    else:
-                        wrong_bin = choice(test_bins, excluding=img_bin_num)
-                        test_X_2[example] = choice(wrong_bin).view()
-                        test_Y[example] = 0
-                    example += 1
-        
-        print('omniglot loaded')
-        return ([train_X_1, train_X_2], train_Y), ([test_X_1, test_X_2], test_Y)
+        def generator(batch_size = batch_size, train=True):
+            path_bins = train_path_bins if train else test_path_bins
+            while True:
+                batch_classes = path_bins[np.random.choice(len(path_bins), size = batch_size)]
+                correct_class_paths = [np.random.choice(batch_class, size=2) for batch_class in batch_classes[::2]]
+                wrong_class_paths = [np.random.choice(batch_class) for batch_class in batch_classes[1::2]]
+                batch_x = []
+                batch_y = []
+
+                for (img_1_path, img_2_path), img_3_path in zip(correct_class_paths, wrong_class_paths):
+                    img_1, img_2, img_3 = (load_img(img_path) for img_path in [img_1_path, img_2_path, img_3_path])
+                    batch_x.extend([[img_1.view(), img_2.view()], [img_1.view(), img_3.view()]])
+                    batch_y.extend([1, 0])
+
+                batch_x_1, batch_x_2 = np.transpose(np.array(batch_x), [1,0,2,3,4])
+                batch_y = np.array(batch_y)
+                
+                yield [batch_x_1, batch_x_2], batch_y
+
+        return generator(train=True), generator(train=False)
 
 if __name__ == '__main__':
     pass
